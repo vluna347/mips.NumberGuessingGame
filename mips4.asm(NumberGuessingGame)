@@ -1,12 +1,11 @@
 #Instructions developed with help from ChatGPT OpenAI
 #Design Note:
 # Number Guessing Game: In this number guessing game, the game randomly 
-# generates a number that the player has to guess.If the players guess is too high,
+# generates a number that the player has to guess. If the players guess is too high,
 # a message is printed and a red square is printed. If the guess is too low, a message
-# is printed and a blue square is printed. If the guess ir right, a winning message
-# is printed and a green square is printed.In this program branching is sued to compare
+# is printed and a blue square is printed. If the guess is right, a winning message
+# is printed and a green square is printed. In this program branching is used to compare
 # a players guess with the secret number as well as loops for repeated guessing.
-
 
 .data
 title:   .asciiz "\n--- NUMBER GUESSING GAME ---\n"
