@@ -1,0 +1,232 @@
+#Instructions developed with help from ChatGPT OpenAI
+#Design Note:
+# Number Guessing Game: In this number guessing game, the game randomly 
+# generates a number that the player has to guess.If the players guess is too high,
+# a message is printed and a red square is printed. If the guess is too low, a message
+# is printed and a blue square is printed. If the guess ir right, a winning message
+# is printed and a green square is printed.In this program branching is sued to compare
+# a players guess with the secret number as well as loops for repeated guessing.
+
+
+.data
+title:   .asciiz "\n--- NUMBER GUESSING GAME ---\n"
+prompt:  .asciiz "\nGuess a number between 1 and 100: "
+lowMsg:  .asciiz "Too low! Try again.\n"
+highMsg: .asciiz "Too high! Try again.\n"
+badMsg:  .asciiz "Invalid guess. Enter a number from 1 to 100.\n"
+winMsg:  .asciiz "\nCorrect! You guessed the number!\n"
+triesMsg: .asciiz "Number of guesses: "
+
+.text
+.globl main
+
+main:
+    # Clear Bitmap Display
+    jal clearDisplay
+
+    # Print title
+    li $v0, 4
+    la $a0, title
+    syscall
+
+    # Generate random number from 1 to 100
+    li $a0, 0
+    li $a1, 100
+    li $v0, 42
+    syscall
+
+    addi $s0, $a0, 1    # Secret number
+    li $s1, 0            # Guess counter
+
+guessLoop:
+    # Ask player for a guess
+    li $v0, 4
+    la $a0, prompt
+    syscall
+
+    # Read integer
+    li $v0, 5
+    syscall
+
+    move $s2, $v0        # Store guess
+
+    # Check if guess is between 1 and 100
+    blt $s2, 1, invalid
+    bgt $s2, 100, invalid
+
+    # Count valid guesses
+    addi $s1, $s1, 1
+
+    # Check if guess is correct
+    beq $s2, $s0, correct
+
+    # Check if guess is too low
+    blt $s2, $s0, tooLow
+
+    # Otherwise guess is too high
+    j tooHigh
+
+
+tooLow:
+    # Draw blue square
+    move $a0, $s1
+    li $a1, 2
+    li $a2, 0x000000FF
+    jal drawSquare
+
+    # Print message
+    li $v0, 4
+    la $a0, lowMsg
+    syscall
+
+    j guessLoop
+
+
+tooHigh:
+    # Draw red square
+    move $a0, $s1
+    li $a1, 2
+    li $a2, 0x00FF0000
+    jal drawSquare
+
+    # Print message
+    li $v0, 4
+    la $a0, highMsg
+    syscall
+
+    j guessLoop
+
+
+invalid:
+    # Print invalid input message
+    li $v0, 4
+    la $a0, badMsg
+    syscall
+
+    # Invalid guesses don't count
+    j guessLoop
+
+
+correct:
+    # Draw green square
+    move $a0, $s1
+    li $a1, 2
+    li $a2, 0x0000FF00
+    jal drawSquare
+
+    # Print winning message
+    li $v0, 4
+    la $a0, winMsg
+    syscall
+
+    # Print number of guesses
+    li $v0, 4
+    la $a0, triesMsg
+    syscall
+
+    li $v0, 1
+    move $a0, $s1
+    syscall
+
+    # Exit
+    li $v0, 10
+    syscall
+
+# clearDisplay
+# Clears the 32 x 32 Bitmap Display
+
+clearDisplay:
+    li $t0, 0x10008000
+    li $t1, 1024
+
+clearLoop:
+    sw $zero, 0($t0)
+    addi $t0, $t0, 4
+    addi $t1, $t1, -1
+    bgtz $t1, clearLoop
+
+    jr $ra
+
+# drawSquare
+# a0 = guess number
+# a1 = y coordinate
+# a2 = color
+# Draws a small colored square.
+
+drawSquare:
+    addiu $sp, $sp, -24
+
+    sw $ra, 20($sp)
+    sw $s0, 16($sp)
+    sw $s1, 12($sp)
+    sw $s2, 8($sp)
+    sw $s3, 4($sp)
+    sw $s4, 0($sp)
+
+    # Save arguments
+    move $s0, $a0
+    move $s1, $a1
+    move $s2, $a2
+
+    # X coordinate cycles across display
+    li $t0, 32
+    div $s0, $t0
+    mfhi $s3
+
+    # Each square is 3 pixels wide
+    mul $s3, $s3, 4
+
+    # Y coordinate
+    move $s4, $s1
+
+    li $t7, 0
+
+squareY:
+    li $t6, 0
+
+squareX:
+    # Pixel X
+    add $a0, $s3, $t6
+
+    # Pixel Y
+    add $a1, $s4, $t7
+
+    # Pixel color
+    move $a2, $s2
+
+    jal pixel
+
+    addi $t6, $t6, 1
+    li $t5, 3
+    blt $t6, $t5, squareX
+
+    addi $t7, $t7, 1
+    li $t5, 3
+    blt $t7, $t5, squareY
+
+    # Restore registers
+    lw $s4, 0($sp)
+    lw $s3, 4($sp)
+    lw $s2, 8($sp)
+    lw $s1, 12($sp)
+    lw $s0, 16($sp)
+    lw $ra, 20($sp)
+
+    addiu $sp, $sp, 24
+    jr $ra
+
+# pixel
+# Draws one pixel at (a0, a1)
+# using color in a2
+
+pixel:
+    li $t0, 32
+    mul $t1, $a1, $t0
+    add $t1, $t1, $a0
+    sll $t1, $t1, 2
+
+    li $t0, 0x10008000
+    add $t0, $t0, $t1
+
+    sw $a2, 0($t0)
+    jr $ra
